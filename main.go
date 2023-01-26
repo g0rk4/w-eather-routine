@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	sc := scheduler.NewScheduler(15 * time.Minute)
+	sc := scheduler.NewScheduler(10 * time.Second)
 	ewExecutor := executor.EcoWatExecutor{}
 
 	err := sc.Add(ewExecutor).Add(executor.EcoWatExecutor{}).Start(true)
