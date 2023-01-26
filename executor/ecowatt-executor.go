@@ -27,7 +27,7 @@ type EcoWatt struct {
 
 func (e EcoWatExecutor) Execute() error {
 	client := &http.Client{}
-	token, err := authentication.GetToken()
+	token, err := authentication.New().GetToken()
 	if err != nil {
 		fmt.Println("Unable to get authentication token", err)
 		return err

@@ -16,27 +16,26 @@ type AuthResponse struct {
 	ExpiresAt   time.Time
 }
 
-type Authenticator struct {
-	URI  string `default:"https://digital.iservices.rte-france.com/token/oauth/"`
-	code string `default:"NGZlZTBhMjYtNzMyMS00YjEwLWFhMzUtN2NkODUxY2RkYjA4OmE3OTIxZmNiLWVhZDQtNDZhZS1hYWI0LWYyYWM2NTFhODUyMQ=="`
-}
+type Authenticator struct{}
 
 const TokenExpirationSafetyDelta time.Duration = 10
 
-var once sync.Once
-var instance *Authenticator
-var authResponse *AuthResponse
+var (
+	authResponse *AuthResponse
+	mutex        sync.Mutex
+)
 
-func getInstance() *Authenticator {
-	once.Do(getSingleInstance)
-	return instance
+func New() *Authenticator {
+	return &Authenticator{}
 }
 
-func authenticate() error {
+func (a *Authenticator) authenticate() error {
 	client := &http.Client{}
+	URI := "https://digital.iservices.rte-france.com/token/oauth/"
+	code := "NGZlZTBhMjYtNzMyMS00YjEwLWFhMzUtN2NkODUxY2RkYjA4OmE3OTIxZmNiLWVhZDQtNDZhZS1hYWI0LWYyYWM2NTFhODUyMQ=="
 
-	request, err := http.NewRequest("POST", getInstance().URI, nil)
-	request.Header.Set("Authorization", "Basic "+getInstance().code)
+	request, err := http.NewRequest("POST", URI, nil)
+	request.Header.Set("Authorization", "Basic "+code)
 	token, err := client.Do(request)
 	if err != nil {
 		fmt.Println("Unable to authenticate", err)
@@ -66,9 +65,11 @@ func authenticate() error {
 	return nil
 }
 
-func GetToken() (string, error) {
+func (a *Authenticator) GetToken() (string, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if authResponse == nil || isTokenExpired() {
-		err := authenticate()
+		err := a.authenticate()
 		if err != nil {
 			return "", err
 		}
@@ -78,11 +79,4 @@ func GetToken() (string, error) {
 
 func isTokenExpired() bool {
 	return authResponse.ExpiresAt.Before(time.Now().Add(-time.Second * TokenExpirationSafetyDelta))
-}
-
-func getSingleInstance() {
-	instance = &Authenticator{
-		URI:  "https://digital.iservices.rte-france.com/token/oauth/",
-		code: "NGZlZTBhMjYtNzMyMS00YjEwLWFhMzUtN2NkODUxY2RkYjA4OmE3OTIxZmNiLWVhZDQtNDZhZS1hYWI0LWYyYWM2NTFhODUyMQ==",
-	}
 }
